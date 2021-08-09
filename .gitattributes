@@ -1,4 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
-*.udf diff=KiXtart
-*.kix diff=KiXtart
+*.kix linguist-language=KiXtart
+*.udf linguist-language=KiXtart
