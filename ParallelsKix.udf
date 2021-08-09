@@ -1,0 +1,322 @@
+Function newTask($code, optional $nameFunction)
+	Dim $Path
+	$Path = ExpAndEnvironmentvars("%temp%")+"\task["+_random_(4)+"].kix"
+	If exist($Path)
+		del $Path
+	EndIf
+	FileWrite($Path,
+		$code +@crlf+
+		'Del "'+$Path+'" /c /f' +@crlf+
+		'Del "'+$Path+'.srv" /c /f' +@crlf+
+		'Del "'+$Path+'.cli" /c /f'
+	)
+	
+	$newTask = CreateObject("KiXtart.Application"), $Path, $nameFunction
+	setVar($newTask, chr(36)+'__control__currenttask', $Path)
+	$newTask = await($newTask)
+EndFunction
+
+
+Function include_asyncFunc($Path)
+	Dim $isFile, $i, $x
+	$isFile = split(FileReadAllText($Path), @crlf)
+	
+	Dim
+		$currentLine, $script, $scriptAsync, $lastI,
+		$existAsyncFunctions,
+		$isAsyncFunction, $nameFunction, $paramsFunction
+	
+	$isAsyncFunction = false
+	$existAsyncFunctions = false
+	For $i=0 To ubound($isFile)
+		$currentLine = $isFile[$i]
+		
+		$lastI = $i
+		If (replace($currentLine, " ", "") = 'Quit0;;Extra_Code')
+			$existAsyncFunctions = true
+		Endif
+			
+		If ($existAsyncFunctions and inStr($currentLine, 'ASYNC'))
+			For $x=$i To ubound($isFile)
+				$currentLine = $isFile[$x]
+				
+				If ($isAsyncFunction and not inStr($currentLine, 'ENDASYNC'))
+					$script = $script + @crlf + $currentLine
+				EndIf
+				
+				If (inStr($currentLine, 'ASYNC') and not $isAsyncFunction)
+					$script = "Function"+subStr($currentLine, inStr($currentLine, 'Async')+5) + @crlf
+					$nameFunction = trim(subStr($script, 9))
+					$paramsFunction = subStr($nameFunction, inStr($nameFunction, '('))
+					
+					$nameFunction = subStr($nameFunction, 1, inStr($nameFunction, '(')-1)
+					
+					$scriptAsync =
+						$script + @crlf +
+							chr(36)+$nameFunction+" = newTask("+chr(36)+_Cript("asyncFunction."+$nameFunction+$paramsFunction)+", '"+$nameFunction+"')"+@crlf
+						/*
+						Function nameFunction()
+							Dim $
+							$nameFunction = newTask($VarEncripted, "nameFunction")
+						*/
+							
+					If (inStr($paramsFunction, chr(36)))
+						Dim $param
+						For Each $param in split($paramsFunction, ',')
+							$param = replace($param, " ", "")
+							$param = replace($param, "(", "")
+							$param = replace($param, ")", "")
+							$param = replace($param, chr(36), "")
+							
+							$scriptAsync = $scriptAsync +
+								"setVar("+chr(36)+$nameFunction+', "'+$param+'",'+chr(36)+$param+")"+@crlf
+								/*setVar($myfunc, 'param', $param)*/
+						Next
+					EndIf
+							
+					$scriptAsync = $scriptAsync + "EndFunction"
+					
+					/*
+						## $scriptAsync ##
+						
+						Function nameFunction()
+							Dim $
+							$nameFunction = newTask($VarEncripted, "nameFunction")
+							setVar($nameFunction, "param", $param)
+								...
+						EndFunction
+					*/
+					$=Execute($scriptAsync)
+					
+					$script = ""
+					$isAsyncFunction = true
+				EndIf
+				
+				If (inStr($currentLine, 'ENDASYNC') and $isAsyncFunction)
+					_create("asyncFunction."+$nameFunction+$paramsFunction, $script)
+					
+					$isAsyncFunction = false
+					$scriptAsync = ""
+					$script = ""
+					$nameFunction = ""
+					$paramsFunction = ""
+					$lastI = $x
+					$x = ubound($isFile)
+				EndIf
+				
+			Next
+		EndIf
+		$i = $lastI
+	Next
+EndFunction
+
+Function closeTask($Task)
+	Dim $
+	If (VarTypeName($Task) <> "Object")
+		Exit 404
+	EndIf
+	
+	$=$Task.Task.TerminateScript(true)
+	
+	Del $Task.PathScript /c /f
+	Del $Task.PathScript+".sock.srv" /c /f
+	Del $Task.PathScript+".sock.cli" /c /f
+	
+	$Task = variant
+EndFunction
+
+Function setVar($Task, $Var, $Value)
+	Dim $
+	If (Ubound($Task) == -1)
+		Exit 404
+	EndIf
+	
+	$=$Task[0].SetVar($Var, $Value)
+EndFunction
+
+Function writeChannel($Task, $Code)
+	If (Ubound($Task) == -1)
+		Exit 404
+	EndIf
+	Dim $writeChannel
+	
+	If (Not exist($Task[1]+".sock.srv"))
+		FileWrite($Task[1]+".sock.srv", $Code)
+		
+		$writeChannel=SetFileAttr($Task[1]+".sock.srv", 2)
+	Else
+		If (GetFileAttr($Task[1]+".sock.srv") == 1)
+			Del $Task[1]+".sock.srv" /c /f
+			FileWrite($Task[1]+".sock.srv", $Code)
+			
+			$writeChannel=SetFileAttr($Task[1]+".sock.srv", 2)
+		EndIf
+	EndIf
+EndFunction
+
+Function readChannel($Task)
+	If (VarTypeName($Task) <> "Object")
+		Exit 404
+	EndIf
+	
+	Dim $, $date
+	
+	
+	If (exist($Task.PathScript+".sock.cli"))
+		If (GetFileAttr($Task.PathScript+".sock.cli") == 2)
+			$readChannel = FileReadAllText($Task.PathScript+".sock.cli")
+			
+			Del $Task.PathScript+".sock.cli" /c /f
+			
+			FileWrite($Task.PathScript+".sock.cli", empty)
+			
+			$=SetFileAttr($Task.PathScript+".sock.cli", 1)
+		EndIf
+	EndIf
+EndFunction
+
+Function writeBaseChannel($Date, optional $wait, optional $sys)
+	Dim $,  $i
+	$wait = iIf($wait = "", 1, $wait)
+	$wait = iIf($wait < 1, 1, $wait)
+	
+	If (VarTypeName($sys) == "Object")
+		$=Execute($sys.DoEvents())
+	EndIf
+	If ($wait > 0)
+		Sleep 0.015
+	EndIf
+	
+	for $i=0 to $wait
+		If (Not exist($__control__currenttask+".sock.cli"))
+			FileWrite($__control__currenttask+".sock.cli", $Date)
+			
+			$=SetFileAttr($__control__currenttask+".sock.cli", 2)
+		Else
+			If (GetFileAttr($__control__currenttask+".sock.cli") == 1)
+				Del $__control__currenttask+".sock.cli" /c /f
+				FileWrite($__control__currenttask+".sock.cli", $Date)
+				
+				$=SetFileAttr($__control__currenttask+".sock.cli", 2)
+			EndIf
+		EndIf
+	next
+EndFunction
+
+Function readBaseChannel()
+	If (exist($__control__currenttask+".sock.srv"))
+		If (GetFileAttr($__control__currenttask+".sock.srv") == 2)
+			$readBaseChannel = FileReadAllText($__control__currenttask+".sock.srv")
+			Del $__control__currenttask+".sock.srv" /c /f
+			
+			FileWrite($__control__currenttask+".sock.srv", "")
+			SetFileAttr($__control__currenttask+".sock.srv", 1)
+		EndIf
+	EndIf
+EndFunction
+
+Function eofReadChannel($Task)
+	Dim $
+	$eofReadChannel = readChannel($Task)
+	
+	$ = 0
+	While (trim($eofReadChannel) == "")
+		$eofReadChannel = readChannel($Task)
+		
+		$ = $ + 1
+		If ($ > 20)
+			$eofReadChannel = empty
+			Exit 0
+		EndIf
+		Sleep 0.015
+	Loop
+EndFunction
+
+Function await($Task, optional $Var)
+	If (Ubound($Task) == -1)
+		Exit 404
+	EndIf
+	
+	If ($Var == empty And ubound($Task) > 1)
+		$Var = $Task[2]
+	EndIf
+	
+	Dim $Error, $vbs
+	
+	$Error = 1
+	while not ($Error = 0)
+		$Error = $Task[0].ScriptStatus
+		If ($await == empty)
+			; $=runTask($Task)
+			Dim $vbs
+			
+			$vbs = CreateObject("ScriptControl")
+			$vbs.Language = "VBScript"
+			$vbs.AddObject("Task", $Task[0])
+			$vbs.AddObject("ObjCircular", $vbs)
+			$vbs.AddCode(
+				"class kix_class"+@crlf+
+					'public Namevar'+@crlf+
+					'public PathScript'+@crlf+
+					'public RunValue'+@crlf+
+					'public Task'+@crlf+
+					
+					
+					'public sub Initialize(TTask)'+@crlf+
+						'Set Task = TTask'+@crlf+
+					'end sub'+@crlf+
+					
+					'public sub Run'+@crlf+
+						'Task.RunScript PathScript, "", true'+@crlf+
+					'end sub'+@crlf+
+					
+					"public function Await"+@crlf+
+						"Await = Task.GetVar(Namevar)"+@crlf+
+						
+						"If IsEmpty(Await) and RunValue = 0 Then"+@crlf+
+							"RunValue = 1"+@crlf+
+							"Run()"+@crlf+
+						"End If"+@crlf+
+					"end function"+@crlf+
+					
+					"public function WaitValue"+@crlf+
+						"While (Task.ScriptStatus <> 0)"+@crlf+
+						"Wend"+@crlf+
+						"WaitValue = Task.GetVar(Namevar)"+@crlf+
+						
+						"If IsEmpty(WaitValue) Then"+@crlf+
+							"Run()"+@crlf+
+							"WaitValue = WaitValue()"+@crlf+
+						"End If"+@crlf+
+					"end function"+@crlf+
+				"end class"
+			)
+			$await = $vbs.Eval("New kix_class")
+			
+			$await.RunValue = 0
+			$await.Namevar = $Var
+			$await.PathScript = $Task[1]
+			$await.Initialize($Task[0])
+			
+			$await.Run()
+			Exit $Error
+		EndIf
+	loop
+	
+	Exit $Error
+EndFunction
+
+Function isTerminateTask($Task)
+	If (VarTypeName($Task) <> "Object")
+		$isTerminateTask = true
+		Exit 404
+	EndIf
+	
+	$isTerminateTask = ($Task.Task.ScriptStatus == 0)
+EndFunction
+
+function _random_($lenth)
+	srnd(@ticks)
+	$_random_	= cstr(@ticks * @msecs * rnd(@ticks)) + (@msecs * cint(replace(@time, ':', '')))
+	$_random_	= substr($_random_, 2, $lenth)
+endfunction

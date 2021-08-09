@@ -1,0 +1,54 @@
+Break on
+$=setOption(Explicit, On)
+$=setOption(WrapAtEOL, On)
+
+Include "..\no_dependency\TimeDiff.Udf"
+include "..\dep\AlsArray.udf"
+include "..\dep\Constant.udf"
+include "..\dep\Hash.Udf"
+include "..\ParallelsKix.udf"
+include "..\dep\FileIO.udf"
+
+include_asyncFunc(@curdir+"\ConcorenceTask.udf")
+
+
+
+
+Dim
+	$task, $task2,
+	$vTask, $vTask2
+
+$task = TesteSleep()
+$task2 = TesteSleep2()
+
+Dim $s, $e, $i
+$s = @time+"."+@msecs
+
+"Value Async: "$task.WaitValue?
+"Value ASync2: "$task2.WaitValue?
+
+$e = @time+"."+@msecs
+
+??
+"Inicio em               : "$s?
+"Terminou em             : "$e?
+"Total de tempo decorrido: "TimeDiff($s, $e)?
+
+get$
+
+Quit 0 ;;Extra_Code
+Async TesteSleep()
+	Dim $i
+	For $i=0 To 8
+		Sleep 1
+	Next
+	$TesteSleep = $i
+EndAsync
+
+Async TesteSleep2()
+	Dim $i
+	For $i=1 To 4
+		Sleep 1
+	Next
+	$TesteSleep2 = $i
+EndAsync

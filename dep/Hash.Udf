@@ -1,0 +1,196 @@
+;;AUTHOR		: André Luiz
+;;VERSION		: 1.0.0.2
+Global
+	$_KixDB__INDEX_,/*NAME-LIST*/
+	$_KixDB__NICK_Cript,
+	$_KixDB__INDEX_Cript
+
+function __AddItemList__($key)
+	Dim $__AddItemList__
+	$__AddItemList__ = Ascan($_KixDB__INDEX_, $key)
+	if ($__AddItemList__ = -1)
+		$__AddItemList__ = Ubound($_KixDB__INDEX_) + 1
+		Redim PRESERVE $_KixDB__INDEX_[$__AddItemList__]
+	endif
+	$_KixDB__INDEX_[$__AddItemList__] = $key
+endfunction
+
+function __RenameItem__($key, $ToKey)
+	$_KixDB__INDEX_[AsCan($_KixDB__INDEX_, $key)] = $ToKey
+endfunction
+
+function __RemoveItem__($key)
+	Dim $, $ub, $i
+	$	= Ascan($_KixDB__INDEX_, $key)
+	$ub	= ubound($_KixDB__INDEX_)
+
+	if ($ub = 0)
+		$ub = $ub+1
+	endif
+
+	dim $ID_Replace[$ub-1], $x
+	$x=-1
+	for $i=0 to $ub-1
+		if ($i <> $)
+			$x=$x+1
+			$ID_Replace[$x]	= $_KixDB__INDEX_[$i]
+		endif
+	next
+	$_KixDB__INDEX_	= $ID_Replace
+endfunction
+
+function __GetItem__($key)
+	$__GetItem__ = $_KixDB__VALUE_[Ascan($_KixDB__INDEX_, $key)]
+endfunction
+
+function __isItemList__($key)
+	$__isItemList__ = (Ascan($_KixDB__INDEX_, $key) <> -1)
+endfunction
+
+/*
+	PARTE PRINCIPAL
+*/
+
+function _create($key, optional $value)
+	__AddItemList__($key)
+	$key = '$$'+_Cript($key)
+	exit Execute('if Not IsDeclared('+$key+') Global '+$key+' endif '+$key+' = $$value')
+endfunction
+
+function _put($key, $value)
+	exit Execute('$$'+_Cript($key)+' = $$value')
+endfunction
+
+function _put1($key, $value)
+	$key = _Cript($key)
+	exit Execute('
+		if (ubound($$'+$key+') = -1)
+			redim $$'+$key+'[0]
+		endif
+		$$'+$key+'[0] = $$value
+	')
+endfunction
+
+function _append($key, $value)
+	$key = '$$'+_Cript($key)
+	exit Execute(
+		'Redim Preserve '+$key+'[ubound('+$key+')+1] '+
+		$key+'[ubound('+$key+')] = $$value'
+	)
+endfunction
+
+function _UpDataIndex($key, $ID, $value)
+	$key = '$$'+_Cript($key)
+	exit Execute($key+'['+$ID+'] = $$value')
+endfunction
+
+function _free($key)
+	__RemoveItem__($key) ;Remove da lista
+	exit Execute('redim $$'+_Cript($key))
+endfunction
+
+function _rename($key, $new_key)
+	if not __isItemList__($new_key)
+		dim $_rename, $
+		$=$key
+		$key = '$$'+_Cript($key)
+		$key = Execute(
+			'$$_rename = '+$key+@crlf+
+			$key+' = ""'
+		)
+		__RenameItem__($, $new_key)
+		_create($new_key, $_rename)
+	endif
+endfunction
+
+function _get_value($key)
+	exit Execute('$$_get_value = $$'+_Cript($key))
+endfunction
+
+function _get_frist_value_array($key)
+	exit Execute('$$_get_frist_value_array = $$'+_Cript($key)+"[0]")
+endfunction
+
+function _get_last_value_array($key)
+	$key = _Cript($key)
+	exit Execute('$$_get_last_value_array = $$'+$key+"[ubound($$"+$key+")]")
+endfunction
+
+function _get_count($key)
+	$key = _Cript($key)
+	exit Execute('
+		$$_get_count = ubound($$'+$key+')
+		exit VarType($$'+$key+'[0])
+	')
+endfunction
+
+function _get_value_array($key, $index)
+	if ($index > -1)
+		exit Execute(
+			'$$_get_value_array = $$'+_Cript($key)+@crlf+
+			'if ($index <= ubound($$_get_value_array))'+@crlf+
+			'	$$_get_value_array = $$_get_value_array[$index]'+@crlf+
+			'else'+@crlf+
+			'	$$_get_value_array = ""'+@crlf+
+			'	exit 211'+@crlf+
+			'endif'
+		)
+	endif
+endfunction
+
+function _find_value_array($key, $value)
+	exit Execute(
+		'$$_find_value_array = Ascan($$'+_Cript($key)+', $$value)'
+	)
+endfunction
+
+function _get_find_value_array($key, $value)
+	exit Execute(
+		'$$_get_find_value_array = Ascan($$'+_Cript($key)+', $$value)'+@crlf+
+		'if ($$_get_find_value_array > -1) and ($$_get_find_value_array <= ubound($$'+_Cript($key)+'))'+@crlf+
+		'	$$_get_find_value_array = $$'+_Cript($key)+'[$$_get_find_value_array]'+@crlf+
+		'else'+@crlf+
+		'	$$_get_find_value_array = ""'+@crlf+
+		'endif'
+	)
+endfunction
+
+function _get_keys()
+	$_get_keys = $_KixDB__INDEX_
+endfunction
+
+function _Cript($key)
+	dim $
+	$ = Ascan($_KixDB__NICK_Cript, $key)
+	if ($ <> -1)
+		$_Cript = $_KixDB__INDEX_Cript[$]
+	else
+		$key = Ucase($key)
+		for $=1 to len($key)
+			$_Cript = $_Cript+'_'+asc(substr($key, $, 1))
+		next
+		$ = ubound($_KixDB__INDEX_Cript)
+		Redim
+			preserve $_KixDB__NICK_Cript[$+1],
+			preserve $_KixDB__INDEX_Cript[$+1]
+		$_KixDB__NICK_Cript[$+1]	= $key
+		$_KixDB__INDEX_Cript[$+1]	= $_Cript
+	endif
+endfunction
+
+; function _DCriptNick($key)
+	; $_DCriptNick = Ascan($_KixDB__NICK_Cript, $key)
+	; if ($_DCriptNick <> -1)
+		; $_DCriptNick = $_KixDB__INDEX_Cript[$_DCriptNick]
+	; else
+		; $_DCriptNick = _Cript($key)
+	; endif
+; endfunction
+
+function _DCript($key)
+	dim $i
+	$key = split($key, '_')
+	for $i=0 to ubound($key)
+		$_DCript = $_DCript+chr($key[$i])
+	next
+endfunction

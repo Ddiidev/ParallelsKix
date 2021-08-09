@@ -1,0 +1,15 @@
+Function FileReadAllText($Path)
+	Dim $objFSO, $objFile
+	$objFSO			= CreateObject("Scripting.FileSystemObject")
+	$objFile		= $objFSO.OpenTextFile($Path, 1, 0)
+	$FileReadAllText= $objFile.ReadAll
+	$objFile.Close()
+EndFunction
+
+Function FileWrite($Path, $Text)
+	Dim $objFSO, $objFile
+	$objFSO		= CreateObject("Scripting.FileSystemObject")
+	$objFile	= $objFSO.OpenTextFile($Path, 8, 1)
+	$objFile.Write($Text)
+	$objFile.Close()
+EndFunction

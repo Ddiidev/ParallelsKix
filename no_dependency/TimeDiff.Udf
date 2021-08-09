@@ -1,0 +1,156 @@
+;FUNCTION      TimeDiff
+;
+;ACTION        Calculates the time difference between two times
+;
+;AUTHOR        Jens Meyer (sealeopard@usa.net)
+;
+;VERSION       1.1
+;
+;KIXTART       4.20
+;
+;SYNTAX        TIMEDIFF(TIME1,TIME2)
+;
+;PARAMETYERS   TIME1
+;              Required string containing either a time "HH:MM[:SS.MSECS]" or a value
+;              greater than zero and less than 86400 representing seconds and fractions
+;              e.g 20.040 for 20 seconds and 40 milliseconds
+;
+;              TIME2
+;              Required string containing either a time "HH:MM[:SS.MSECS]" or a value
+;              greater than zero and less than 86400 representing seconds and fractions
+;              e.g 20.040 for 20 seconds and 40 milliseconds
+;
+;RETURNS       Returns difference between TIME1 and TIME2
+;
+;REMARKS       none
+;
+;DEPENDENCIES  SERIALTIME() @ http://www.kixtart.org/cgi-bin/ultimatebb.cgi?ubb=get_topic&f=12&t=000039
+;
+;EXAMPLE       $rc=TIMEDIFF('23:20:33','01:01:01.245')
+;
+;KIXTART BBS   http://www.kixtart.org/cgi-bin/ultimatebb.cgi?ubb=get_topic&f=12&t=000040
+;
+function timediff($time1,$time2)
+  Dim $difference
+
+  select
+  case instr($time1,':')
+    $time1=serialtime($time1)
+  case $time1<>''
+    $time1=cdbl($time1)
+  case 1
+    $time1=0.0
+  endselect
+
+  select
+  case instr($time2,':')
+    $time2=serialtime($time2)
+  case $time2<>''
+    $time2=cdbl($time2)
+  case 1
+    $time2=0.0
+  endselect
+
+  if $time1>$time2
+    $difference=$time1-$time2
+  else
+    $difference=$time2-$time1
+  endif
+
+  $timediff=serialtime($difference)
+  exit 0
+endfunction
+
+;FUNCTION      SerialTime
+;
+;AUTHOR        Jens Meyer (sealeopard@usa.net)
+;
+;ACTION        Convert time to numbers (and back) for the purpose of performing time math
+;
+;VERSION       1.1
+;
+;KIXTART       4.20
+;
+;SYNTAX        SERIALTIME(STRTIME)
+;
+;PARAMETERS    STRTIME
+;              Reqired string containing either a time "HH:MM[:SS.MSECS]" or an integer greater
+;              than zero and less than 86400 representing seconds and fractions
+;              e.g 20.040 for 20 seconds and 40 milliseconds
+;
+;RETURNS       If supplied a time, returns seconds since midnight. If supplied seconds since
+;              midnight, returns time.
+;
+;REMARKS       Reworked function based on the ScriptLogic UDF but without dependencies and adapted for milliseconds
+;              The original ScriptLogic UDF at
+;              http://www.scriptlogic.com/kixtart/FunctionLibrary_ViewFunction.aspx?ID=SerialTime
+;              cannot manage milliseconds and relies on three dependencies.
+;
+;DEPENDENCIES  none
+;
+;EXAMPLE       $rc=SERIALTIME('02:20:33.187')
+;
+;KIXTART BBS   http://www.kixtart.org/cgi-bin/ultimatebb.cgi?ubb=get_topic&f=12&t=000039
+;
+function serialtime($strtime)
+  dim $hours, $minutes, $seconds, $milliseconds
+
+  if instr($strtime,':')
+    $strtime=split($strtime,':')
+
+    select
+    case ubound($strtime)<3
+      redim preserve $strtime[3]
+      if instr($strtime[2],'.')
+        $strtime[3]=right($strtime[2],len($strtime[2])-instr($strtime[2],'.'))
+        $strtime[2]=left($strtime[2],instr($strtime[2],'.')-1)
+      else
+        $strtime[3]=0
+      endif
+    case ubound($strtime)>3
+      $serialtime=-1
+      exit 87
+    endselect
+
+    $hours=val($strtime[0])
+    if $hours<0 or $hours>23
+      $serialtime=-1
+      exit 87
+    endif
+    $minutes=val($strtime[1])
+    if $minutes<0 or $minutes>59
+      $serialtime=-1
+      exit 87
+    endif
+    $seconds=val($strtime[2])
+    if $seconds<0 or $seconds>59
+      $serialtime=-1
+      exit 87
+    endif
+    $milliseconds=cdbl($strtime[3])
+    if $milliseconds<0 or $milliseconds>999
+      $serialtime=-1
+      exit 87
+    endif
+    $serialtime=0.0+($hours*3600)+($minutes*60)+($seconds)+($milliseconds/999)
+  else
+    $strtime=val(cdbl($strtime)*1000)
+    if $strtime<=86400000 and $strtime>=0
+      $hours=$strtime/3600/1000
+      $strtime=$strtime-($hours*3600*1000)
+      $hours=right('00'+$hours,2)
+      $minutes=$strtime/60/1000
+      $strtime=$strtime-($minutes*60*1000)
+      $minutes=right('00'+$minutes,2)
+      $seconds=$strtime/1000
+      $strtime=$strtime-($seconds*1000)
+      $seconds=right('00'+$seconds,2)
+      $milliseconds=left($strtime,3)
+      $milliseconds=right('000'+$milliseconds,3)
+      $serialtime=$hours+':'+$minutes+':'+$seconds+'.'+$milliseconds
+    else
+      $serialtime='-1'
+      exit 87
+    endif
+  endif
+endfunction

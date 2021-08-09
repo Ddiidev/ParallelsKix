@@ -1,0 +1,89 @@
+;FUNCTIONS
+;				true, false, default, null, empty, variant, object, date
+;
+;AUTHOR			André Luiz (alsdevbin@gmail.com)
+;
+;CONTRIBUTORS	André Luiz
+;
+;ACTION 
+;
+;SYNTAX		
+;				true(), false(), default(), null(), empty(), variant(), object(), date()
+;
+;VERSION		1.2.0.9
+;DATE CREATED	03/11/2018
+;DATE MODIFIED	18/03/2021
+;
+;PARAMETERS
+;
+;REMARKS
+;
+;RETURNS
+;			true()		;Returns a type, with a compatible value.
+;			false()		;Returns a type, with a compatible value.
+;			default()	;Returns a type, with a compatible value.
+;			null()		;Returns a type, with a compatible value.
+;			empty()		;Returns a type, with a compatible value.
+;			variant()	;Returns a type, with a compatible value.
+;			object()	;Returns a type, with a compatible value.
+;			date()		;Returns a type, with a compatible value.
+;		
+;
+;DEPENDENCIES 	None
+;
+;KIXTART VER	4.50
+; 
+;Examples:
+;
+;While (true)
+;	"infinite loop"?
+;Loop
+;
+;Select
+;	Case "pt" = "br"
+;		"Brasil"
+;	Case default
+;		"All countries"
+;Endselect
+;
+;$obj = CreateObject("Null")
+;$array = variant
+;If (varType($obj) = null)
+;	If (varType($array) = varType(variant))
+;		$array = null
+;	EndIf
+;Else If (varType($ob) = varType(object))
+;	$array = ""
+;	If (varType(substr($array, 1)) = varType(empty))
+;		$array = null
+;	EndIf
+;EndIf EndIf
+;Source:
+
+GLOBAL $___SC___,
+	$___SC_EMPTY,
+	$___SC_NULL,
+	$___SC_TRUE,
+	$___SC_FALSE,
+	$___SC_VARIANT,
+	$___SC_OBJECT,
+	$___SC_DATE
+$___SC___ = CreateObject("ScriptControl")
+$___SC___.Language = "VBScript"
+$___SC___.AddCode("Class TOBJECT"+@Crlf+"End Class")
+$___SC_EMPTY	= $___SC___.Eval("Empty")
+$___SC_NULL		= $___SC___.Eval("Null")
+$___SC_TRUE		= $___SC___.Eval("true")
+$___SC_FALSE	= $___SC___.Eval("false")
+$___SC_VARIANT	= $___SC___.Eval("array")
+$___SC_DATE		= $___SC___.Eval("date")
+$___SC_OBJECT	= $___SC___.Eval("new TOBJECT")
+
+function true()		$true=$___SC_TRUE		endfunction
+function false()	$false=$___SC_FALSE		endfunction
+function default()	$default=$___SC_TRUE	endfunction
+function null()		$null=$___SC_NULL		endfunction
+function empty()	$empty=$___SC_EMPTY		endfunction
+function variant()	$variant=$___SC_VARIANT endfunction
+function object()	$object=$___SC_OBJECT	endfunction
+function date()		$date=$___SC_DATE		endfunction
