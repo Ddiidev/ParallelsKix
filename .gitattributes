@@ -1,2 +1,7 @@
 static/* linguist-vendored
-*.* linguist-language=KiXtart
+*.kix    text
+*.udf    text
+
+
+*.kix    text diff=kixtart
+*.udf    text diff=kixtart
