@@ -4,15 +4,10 @@ Function newTask($code, optional $nameFunction)
 	If exist($Path)
 		del $Path
 	EndIf
-	FileWrite($Path,
-		$code +@crlf+
-		'Del "'+$Path+'" /c /f' +@crlf+
-		'Del "'+$Path+'.srv" /c /f' +@crlf+
-		'Del "'+$Path+'.cli" /c /f'
-	)
 	
 	$newTask = CreateObject("KiXtart.Application"), $Path, $nameFunction
 	setVar($newTask, chr(36)+'__control__currenttask', $Path)
+	setVar($newTask, chr(36)+'__MyCodeAsync__', $code)
 	$newTask = await($newTask)
 EndFunction
 
@@ -22,9 +17,10 @@ Function include_asyncFunc($Path)
 	$isFile = split(FileReadAllText($Path), @crlf)
 	
 	Dim
-		$currentLine, $script, $scriptAsync, $lastI,
-		$existAsyncFunctions,
-		$isAsyncFunction, $nameFunction, $paramsFunction
+		$currentLine, $script, $scriptAsync, $scriptSync,
+		$lastI, $existAsyncFunctions,
+		$isAsyncFunction, $nameFunction, $paramsFunction,
+		$nameSyncFunction
 	
 	$isAsyncFunction = false
 	$existAsyncFunctions = false
@@ -50,6 +46,7 @@ Function include_asyncFunc($Path)
 					$paramsFunction = subStr($nameFunction, inStr($nameFunction, '('))
 					
 					$nameFunction = subStr($nameFunction, 1, inStr($nameFunction, '(')-1)
+					$nameSyncFunction = '!'+$nameFunction
 					
 					$scriptAsync =
 						$script + @crlf +
@@ -94,6 +91,11 @@ Function include_asyncFunc($Path)
 				
 				If (inStr($currentLine, 'ENDASYNC') and $isAsyncFunction)
 					_create("asyncFunction."+$nameFunction+$paramsFunction, $script)
+					$=Execute(
+						"Function "+$nameSyncFunction+$paramsFunction+@crlf+
+							Replace($script, chr(36)+$nameFunction, chr(36)+'!'+$nameFunction)+@crlf+
+						"EndFunction"
+					)
 					
 					$isAsyncFunction = false
 					$scriptAsync = ""
@@ -247,7 +249,11 @@ Function await($Task, optional $Var)
 	while not ($Error = 0)
 		$Error = $Task[0].ScriptStatus
 		If ($await == empty)
-			; $=runTask($Task)
+			FileWrite($Task[1],
+				chr(36)+"=Execute("+chr(36)+'__MyCodeAsync__'+")"+@crlf+
+				'Del '+chr(36)+'__control__currenttask.srv /c /f' +@crlf+
+				'Del '+chr(36)+'__control__currenttask.cli /c /f'
+			)
 			Dim $vbs
 			
 			$vbs = CreateObject("ScriptControl")
@@ -268,6 +274,8 @@ Function await($Task, optional $Var)
 					
 					'public sub Run'+@crlf+
 						'Task.RunScript PathScript, "", true'+@crlf+
+						'Set obj = createobject("Scripting.FileSystemObject")'+@crlf+
+						'obj.DeleteFile PathScript'+@crlf+
 					'end sub'+@crlf+
 					
 					"public function Await"+@crlf+

@@ -9,7 +9,7 @@ include "..\dep\Hash.Udf"
 include "..\ParallelsKix.udf"
 include "..\dep\FileIO.udf"
 
-include_asyncFunc(@curdir+"\ConcorenceTask.udf")
+include_asyncFunc(@curdir+"\ConcorenceTask.kix")
 
 
 
