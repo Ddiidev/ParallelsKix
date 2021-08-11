@@ -5,12 +5,11 @@ Function newTask($code, optional $nameFunction)
 		del $Path
 	EndIf
 	
-	$newTask = CreateObject("KiXtart.Application"), $Path, $nameFunction
+	$newTask = CreateObject("KiXtart.Application"), $Path, $nameFunction, $code
 	setVar($newTask, chr(36)+'__control__currenttask', $Path)
 	setVar($newTask, chr(36)+'__MyCodeAsync__', $code)
 	$newTask = await($newTask)
 EndFunction
-
 
 Function include_asyncFunc($Path)
 	Dim $isFile, $i, $x
@@ -90,10 +89,13 @@ Function include_asyncFunc($Path)
 				EndIf
 				
 				If (inStr($currentLine, 'ENDASYNC') and $isAsyncFunction)
-					_create("asyncFunction."+$nameFunction+$paramsFunction, $script)
+					_create(
+						"asyncFunction."+$nameFunction+$paramsFunction,
+						__ParseReturnToNameVar__($script, $nameFunction)
+					)
 					$=Execute(
 						"Function "+$nameSyncFunction+$paramsFunction+@crlf+
-							Replace($script, chr(36)+$nameFunction, chr(36)+'!'+$nameFunction)+@crlf+
+							__ParseReturnToNameVar__($script, '!'+$nameFunction)+@crlf+
 						"EndFunction"
 					)
 					
@@ -112,6 +114,28 @@ Function include_asyncFunc($Path)
 	Next
 EndFunction
 
+Function __ParseReturnToNameVar__($script, $nameFunction)
+	Dim $currentLine, $i
+	$script = split($script, @crlf)
+	For $i=0 To ubound($script)
+		$currentLine = $script[$i]
+		
+		If (inStr(replace($currentLine, " ", ""), "return="))
+			Dim $x
+			$x = inStr($currentLine, "return=")
+			If ($x > -1)
+				$currentLine =
+					subStr($currentLine, 0, $x)+
+						chr(36)+$nameFunction+
+					subStr($currentLine, $x+8)
+				$script[$i] = $currentLine
+			EndIf
+		EndIf
+	Next
+	
+	$__ParseReturnToNameVar__ = join($script, @crlf)
+EndFunction
+
 Function closeTask($Task)
 	Dim $
 	If (VarTypeName($Task) <> "Object")
@@ -123,8 +147,6 @@ Function closeTask($Task)
 	Del $Task.PathScript /c /f
 	Del $Task.PathScript+".sock.srv" /c /f
 	Del $Task.PathScript+".sock.cli" /c /f
-	
-	$Task = variant
 EndFunction
 
 Function setVar($Task, $Var, $Value)
@@ -249,11 +271,6 @@ Function await($Task, optional $Var)
 	while not ($Error = 0)
 		$Error = $Task[0].ScriptStatus
 		If ($await == empty)
-			FileWrite($Task[1],
-				chr(36)+"=Execute("+chr(36)+'__MyCodeAsync__'+")"+@crlf+
-				'Del '+chr(36)+'__control__currenttask.srv /c /f' +@crlf+
-				'Del '+chr(36)+'__control__currenttask.cli /c /f'
-			)
 			Dim $vbs
 			
 			$vbs = CreateObject("ScriptControl")
@@ -266,6 +283,7 @@ Function await($Task, optional $Var)
 					'public PathScript'+@crlf+
 					'public RunValue'+@crlf+
 					'public Task'+@crlf+
+					'public Code'+@crlf+
 					
 					
 					'public sub Initialize(TTask)'+@crlf+
@@ -273,9 +291,12 @@ Function await($Task, optional $Var)
 					'end sub'+@crlf+
 					
 					'public sub Run'+@crlf+
+						'Set fso = CreateObject("Scripting.FileSystemObject")'+@crlf+
+						'Set file = fso.CreateTextFile(PathScript, True)'+@crlf+
+						'file.Write Code'+@crlf+
+						'file.close'+@crlf+
+						'Set Task = CreateObject("KiXtart.Application")'+@crlf+
 						'Task.RunScript PathScript, "", true'+@crlf+
-						'Set obj = createobject("Scripting.FileSystemObject")'+@crlf+
-						'obj.DeleteFile PathScript'+@crlf+
 					'end sub'+@crlf+
 					
 					"public function Await"+@crlf+
@@ -304,6 +325,11 @@ Function await($Task, optional $Var)
 			$await.RunValue = 0
 			$await.Namevar = $Var
 			$await.PathScript = $Task[1]
+			$await.Code = 
+				'Del '+chr(36)+'__control__currenttask /c /f' +@crlf+
+				chr(36)+"=Execute("+chr(36)+'__MyCodeAsync__'+")"+@crlf+
+				'Del '+chr(36)+'__control__currenttask+".srv" /c /f' +@crlf+
+				'Del '+chr(36)+'__control__currenttask+".cli" /c /f'
 			$await.Initialize($Task[0])
 			
 			$await.Run()
