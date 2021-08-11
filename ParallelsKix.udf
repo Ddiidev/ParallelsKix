@@ -70,7 +70,11 @@ Function include_asyncFunc($Path)
 						Next
 					EndIf
 							
-					$scriptAsync = $scriptAsync + "EndFunction"
+
+					$scriptAsync = 
+						$scriptAsync +
+							chr(36)+$nameFunction+".Run()"+@crlf+
+						"EndFunction"
 					
 					/*
 						## $scriptAsync ##
@@ -150,12 +154,15 @@ Function closeTask($Task)
 EndFunction
 
 Function setVar($Task, $Var, $Value)
-	Dim $
-	If (Ubound($Task) == -1)
-		Exit 404
+	If (VarTypeName($Task) == "Object")
+		If (VarTypeName($Task.Task) == "Object")
+			Exit $Task.Task.SetVar($Var, $Value)
+		Else
+			Exit 404
+		EndIf
 	EndIf
 	
-	$=$Task[0].SetVar($Var, $Value)
+	Exit $Task[0].SetVar($Var, $Value)
 EndFunction
 
 Function writeChannel($Task, $Code)
@@ -332,7 +339,6 @@ Function await($Task, optional $Var)
 				'Del '+chr(36)+'__control__currenttask+".cli" /c /f'
 			$await.Initialize($Task[0])
 			
-			$await.Run()
 			Exit $Error
 		EndIf
 	loop

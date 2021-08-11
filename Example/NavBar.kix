@@ -1,0 +1,35 @@
+Break on
+$=setOption(WrapAtEOL, On)
+
+Include "..\no_dependency\TimeDiff.Udf"
+include "..\dep\AlsArray.udf"
+include "..\dep\Constant.udf"
+include "..\dep\Hash.Udf"
+include "..\ParallelsKix.udf"
+include "..\dep\FileIO.udf"
+
+include_asyncFunc(@curdir+"\NavBar.kix")
+
+
+$nav = NavBar("Time: ")
+
+while true
+    At(0,0)
+	!GetTicks("Ticks: ")
+    sleep 5
+	At(1,0)
+loop
+
+Quit 0 ;;Extra_Code
+Async NavBar($str)
+	while true
+		At(1,0)
+		$str  @time"  "
+		sleep 0.05
+		At(0,0)
+	loop
+EndAsync
+
+Async GetTicks($str)
+	return = $str + @ticks
+EndAsync
