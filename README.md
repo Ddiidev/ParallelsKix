@@ -64,4 +64,4 @@ EndAsync
 
 >*Note that in GetTicks(), instead of putting a ```$GetTicks = $str + @ticks```, a ```return = $str + @ticks``` is put in, to keep a pattern between a synchronous and asynchronous call*
 
-![Example]("./screenshot/img.gif")
+![Example](screenshot/img.gif)
