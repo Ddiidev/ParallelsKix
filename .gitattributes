@@ -1,7 +1,3 @@
-static/* linguist-vendored
-*.kix    text
-*.udf    text
-
-
-*.kix    text diff=kixtart
-*.udf    text diff=kixtart
+# Re-classify Euphoria files
+*.kix linguist-language=KiXtart
+*.udf linguist-language=KiXtart
